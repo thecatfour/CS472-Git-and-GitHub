@@ -1,8 +1,10 @@
-import json
+﻿import json
 import requests
 import csv
-
+import matplotlib.pyplot as plt
 import os
+import numpy as np
+import datetime
 
 if not os.path.exists("data"):
  os.makedirs("data")
@@ -21,9 +23,8 @@ def github_auth(url, lsttoken, ct):
         print(e)
     return jsonData, ct
 
-# @dictFiles, empty dictionary of files
-# @lstTokens, GitHub authentication tokens
-# @repo, GitHub repo
+fileupdatehistory = dict()
+filetypes ={"kts", "cpp", "java"}
 def countfiles(dictfiles, lsttokens, repo):
     ipage = 1  # url page counter
     ct = 0  # token counter
@@ -47,12 +48,28 @@ def countfiles(dictfiles, lsttokens, repo):
                 filesjson = shaDetails['files']
                 for filenameObj in filesjson:
                     filename = filenameObj['filename']
-                    #Adapted CollectFiles script to only collect source files for repo 'scottyab/rootbeer'
-                    if filename.endswith(".java") or filename.endswith(".c") or filename.endswith(".cpp") or filename.endswith(".kt") or "CMake" in filename:
-                        dictfiles[filename] = dictfiles.get(filename, 0) + 1
-                        print(filename)
+                    splitfilename = filename.split('.')
+
+                    if len(splitfilename) < 2  or splitfilename[1] not in filetypes:
+                        continue
+                    githubtime = shaObject['commit']['author']['date']
+                    date = datetime.datetime.strptime(githubtime, "%Y-%m-%dT%H:%M:%SZ")
+
+                    dictfiles[filename] = dictfiles.get(filename, 0) + 1
+                    if filename in fileupdatehistory:
+                        history = fileupdatehistory[filename]
+                        timediff = history[0] - date
+                        timediff = timediff.total_seconds()
+                        weeks = divmod(timediff, 604800)[0]
+                        currhist = fileupdatehistory[filename]
+                        currhist.append(weeks)
+                        fileupdatehistory[filename] = currhist
+                    else:
+                        fileupdatehistory[filename] = [date]
+
             ipage += 1
-    except:
+    except Exception as e:
+        print(e)
         print("Error receiving data")
         exit(0)
 # GitHub repo
@@ -66,29 +83,26 @@ repo = 'scottyab/rootbeer'
 # Remember to empty the list when going to commit to GitHub.
 # Otherwise they will all be reverted and you will have to re-create them
 # I would advise to create more than one token for repos with heavy commits
-lstTokens = ["fd02a694b606c4120b8ca7bbe7ce29229376ee",
-                "16ce529bdb32263fb90a392d38b5f53c7ecb6b",
-                "8cea5715051869e98044f38b60fe897b350d4a"]
+lstTokens = [""]
+
+SrcFiles = []
+
+with open('data/file_rootbeer.csv') as file:
+    csvFile = csv.DictReader(file)
+    for col in csvFile:
+        SrcFiles.append(col['Filename'])
+
 
 dictfiles = dict()
 countfiles(dictfiles, lstTokens, repo)
-print('Total number of files: ' + str(len(dictfiles)))
 
-file = repo.split('/')[1]
-# change this to the path of your file
-fileOutput = 'data/file_' + file + '.csv'
-rows = ["Filename", "Touches"]
-fileCSV = open(fileOutput, 'w')
-writer = csv.writer(fileCSV)
-writer.writerow(rows)
+for key in fileupdatehistory.keys():
+    history = fileupdatehistory[key]
+    history[0] = 0
+    fileupdatehistory[key] = history
 
-bigcount = None
-bigfilename = None
-for filename, count in dictfiles.items():
-    rows = [filename, count]
-    writer.writerow(rows)
-    if bigcount is None or count > bigcount:
-        bigcount = count
-        bigfilename = filename
-fileCSV.close()
-print('The file ' + bigfilename + ' has been touched ' + str(bigcount) + ' times.')
+for key in fileupdatehistory:
+    plt.scatter([key]*len(fileupdatehistory[key]), fileupdatehistory[key])
+
+
+plt.show()
