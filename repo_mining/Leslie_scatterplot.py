@@ -2,63 +2,71 @@ import os
 import csv
 
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 
 from ast import literal_eval
 
-dataFile = os.path.join("data", "authorsFileTouches_file_rootbeer.csv")
-
 # Read the data into a list using literal_eval
+# Returns a list of filenames along with a list of those files' commits
 
-commitData = []
+def get_list_from_csv(filename: str) -> list:
 
-with open(dataFile) as csvfile:
-    reader = csv.DictReader(csvfile)
+    output = []
 
-    for row in reader:
-        try:
-            commitData.append([row["Filename"], literal_eval(row["Touches"])])
-        except:
-            print("Error when parsing filename " + row["Filename"])
+    with open(filename) as csvfile:
+        reader = csv.DictReader(csvfile)
+
+        for row in reader:
+            try:
+                output.append([row["Filename"], literal_eval(row["Touches"])])
+            except:
+                print("Error when parsing filename " + row["Filename"])
+    
+    return output
 
 # Give each author their own color
+# Returns author colors, author commit counter, and total author counter
 
-authorColors = dict()
+def get_author_data(commitData: list):
 
-colorItems = [
-    "aqua", "darkcyan", "indigo", "blue", "blueviolet",
-    "brown", "coral", "crimson", "gray", "darkgreen",
-    "darkorange", "gold", "lightpink", "lime", "olive",
-    "lightslategray", "lightsteelblue", "peru", "royalblue", "pink",
-    "tan", "teal", "tomato", "violet", "yellow",
-    "darkorchid", "darkred", "darksalmon", "deeppink", "darkslateblue",
-    "goldenrod", "khaki", "lightseagreen", "mediumblue", "mediumaquamarine",
-    "mediumseagreen", "mediumslateblue", "mediumvioletred", "midnightblue", "navajowhite",
-    "olivedrab", "orangered", "orchid", "purple", "saddlebrown",
-    "salmon", "sienna", "seagreen", "skyblue", "silver"
-]
+    authorColors = dict()
 
-# Counts the total amount of authors
-authorCounter = 0
+    colorItems = [
+        "aqua", "darkcyan", "indigo", "blue", "blueviolet",
+        "brown", "coral", "crimson", "gray", "darkgreen",
+        "darkorange", "gold", "lightpink", "lime", "olive",
+        "lightslategray", "lightsteelblue", "peru", "royalblue", "pink",
+        "tan", "teal", "tomato", "violet", "yellow",
+        "darkorchid", "darkred", "darksalmon", "deeppink", "darkslateblue",
+        "goldenrod", "khaki", "lightseagreen", "mediumblue", "mediumaquamarine",
+        "mediumseagreen", "mediumslateblue", "mediumvioletred", "midnightblue", "navajowhite",
+        "olivedrab", "orangered", "orchid", "purple", "saddlebrown",
+        "salmon", "sienna", "seagreen", "skyblue", "silver"
+    ]
 
-# Counts how many commits each author makes
-authorCommitCounter = dict()
+    # Counts the total amount of authors
+    authorCounter = 0
 
-for row in commitData:
-    for individualCommit in row[1]:
-        # Increment author commit counter
-        authorCommitCounter[individualCommit[0]] = authorCommitCounter.get(individualCommit[0], 0) + 1
+    # Counts how many commits each author makes
+    authorCommitCounter = dict()
 
-        # Give the author a color if they don't have a color
-        if individualCommit[0] not in authorColors:
-            if authorCounter >= len(colorItems):
-                authorColors[individualCommit[0]] = "black"
-                print(individualCommit[0], "was assigned 'black' by default. More colors are needed.")
-            else:
-                authorColors[individualCommit[0]] = colorItems[authorCounter]
+    for row in commitData:
+        for individualCommit in row[1]:
+            # Increment author commit counter
+            authorCommitCounter[individualCommit[0]] = authorCommitCounter.get(individualCommit[0], 0) + 1
 
-            authorCounter += 1
+            # Give the author a color if they don't have a color
+            if individualCommit[0] not in authorColors:
+                if authorCounter >= len(colorItems):
+                    authorColors[individualCommit[0]] = "black"
+                    print(individualCommit[0], "was assigned 'black' by default. More colors are needed.")
+                else:
+                    authorColors[individualCommit[0]] = colorItems[authorCounter]
 
-del colorItems
+                authorCounter += 1
+    
+    return authorColors, authorCommitCounter, authorCounter
+
 
 # Translate dates into weeks
 
@@ -100,81 +108,96 @@ def date_to_weeks(date: str) -> float:
 
 # Get the earliest week to subtract from other dates
 
-earliestWeek = date_to_weeks(commitData[len(commitData) - 1][1][0][1]) # Initialize the earliest week with the first found date
+def get_earliest_week(commitData: list) -> float:
 
-for file in commitData:
-    for commit in file[1]:
-        thisWeek = date_to_weeks(commit[1])
+    earliestWeek = date_to_weeks(commitData[len(commitData) - 1][1][0][1]) # Initialize the earliest week with the first found date
 
-        if thisWeek < earliestWeek:
-            earliestWeek = thisWeek
+    for file in commitData:
+        for commit in file[1]:
+            thisWeek = date_to_weeks(commit[1])
 
-# Sort the data based on commit number
-# This probably isnt needed, so it uses bubble sort
-# Leave swap as false to skip this step
+            if thisWeek < earliestWeek:
+                earliestWeek = thisWeek
+    
+    return earliestWeek
 
-swap = False
 
-while(swap):
-    swap = False
+# Takes a dict of authors and their commit counter
+# Returns an ordered list of those authors with more commits
+# occurring earlier in the list
 
-    for i in range(0, len(commitData) - 2):
-        if len(commitData[i][1]) < len(commitData[i + 1][1]):
-            
-            temp = commitData[i + 1]
-            commitData[i + 1] = commitData[i]
-            commitData[i] = temp
 
-            swap = True
+def get_author_commit_counter_list(authorCommitCounter: dict) -> list:
 
-# Output a key for the graph into the console
+    authorCommitCounterList = [*authorCommitCounter.items()]
 
-# Print some data about the authors
+    # Bubble sort to organize authors based on commit amount
 
-print(f"Total Author Count: {authorCounter}\n")
+    swap = True
 
-authorCommitCounterList = [*authorCommitCounter.items()]
+    while(swap):
+        swap = False
+        for index in range(0, len(authorCommitCounterList) - 2):
+            if authorCommitCounterList[index][1] < authorCommitCounterList[index + 1][1]:
+                temp = authorCommitCounterList[index]
+                authorCommitCounterList[index] = authorCommitCounterList[index + 1]
+                authorCommitCounterList[index + 1] = temp
+                swap = True
+    
+    return authorCommitCounterList
 
-# Bubble sort to organize authors based on commit amount
 
-swap = True
+# Main block where driving code is
 
-while(swap):
-    swap = False
-    for index in range(0, len(authorCommitCounterList) - 2):
-        if authorCommitCounterList[index][1] < authorCommitCounterList[index + 1][1]:
-            temp = authorCommitCounterList[index]
-            authorCommitCounterList[index] = authorCommitCounterList[index + 1]
-            authorCommitCounterList[index + 1] = temp
-            swap = True
 
-for author in authorCommitCounterList:
-    print(f"Author: {author[0]}\nColor: {authorColors[author[0]]}\nCommits: {author[1]}\n")
+if __name__ == "__main__":
 
-# Plot all of the data
+    dataFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "authorsFileTouches_file_rootbeer.csv")
 
-x = []
-y = []
-colors = []
+    commitData = get_list_from_csv(dataFile)
 
-for index, file in enumerate(commitData):
-    for commit in file[1]:
+    authorColors, authorCommitCounter, authorCounter = get_author_data(commitData)
+
+    earliestWeek = get_earliest_week(commitData)
+
+    authorCommitCounterList = get_author_commit_counter_list(authorCommitCounter)
         
-        # Adds the file index to the x list
-        x.append(index)
+    x = []
+    y = []
+    colors = []
+ 
+    # Translates the data into three lists to plot on a scatterplot
+    for index, file in enumerate(commitData):
+        for commit in file[1]:
+            
+            # Adds the file index to the x list
+            x.append(index)
 
-        # Adds the date difference to the y list
-        y.append(date_to_weeks(commit[1]) - earliestWeek)
+            # Adds the date difference to the y list
+            y.append(date_to_weeks(commit[1]) - earliestWeek)
 
-        # Adds the color to the c list
-        colors.append(authorColors[commit[0]])
+            # Adds the color to the c list
+            colors.append(authorColors[commit[0]])
 
-plt.scatter(x, y, c=colors, s=25)
+    fig, ax = plt.subplots()
 
-plt.xlabel("File")
-plt.ylabel("Week")
+    scatter = plt.scatter(x, y, c=colors, s=25)
 
-plt.show()
+    plt.xlabel("File")
+    plt.ylabel("Week")
 
+    # Make the legend
 
+    markers = []
 
+    for author in authorCommitCounterList:
+        markers.append(mlines.Line2D([], [], color=authorColors[author[0]], marker='o', markersize=10, linestyle="None", label=f"{author[0]} ({authorCommitCounter[author[0]]})"))
+
+    legend = ax.legend(handles=markers, bbox_to_anchor=(1, 1), fontsize=9)
+
+    ax.add_artist(legend)
+
+    # Save the scatterplot as "Commits.png", then show it
+
+    plt.savefig("Commits", bbox_extra_artists=(legend,), bbox_inches="tight")
+    plt.show()
