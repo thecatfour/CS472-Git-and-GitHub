@@ -2,3 +2,9 @@
 repo_mining/actual key.txt
 Commits.png
 repo_mining/tempCodeRunnerFile.py
+tdd/src/__pycache__/__init__.cpython-312.pyc
+tdd/src/__pycache__/counter.cpython-312.pyc
+tdd/tests/__pycache__/__init__.cpython-312.pyc
+tdd/tests/__pycache__/test_counter.cpython-312-pytest-8.3.3.pyc
+tdd/.coverage
+tdd/src/__pycache__/status.cpython-312.pyc
