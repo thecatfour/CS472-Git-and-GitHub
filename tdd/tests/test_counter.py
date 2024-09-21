@@ -57,10 +57,10 @@ class TestCounterEndPoints:
 
         assert result.data == b'{"increment_test":1}\n'
 
-    def test_update_nonexistant_counter(self, client):
+    def test_update_nonexistent_counter(self, client):
         """Attempts to increment a counter that does not exist"""
 
-        result = client.put("/counters/nonexistant_test")
+        result = client.put("/counters/nonexistent_test")
 
         assert result.status_code == status.HTTP_204_NO_CONTENT
     
@@ -81,9 +81,31 @@ class TestCounterEndPoints:
         assert int(result.data) == 0
         assert result.status_code == status.HTTP_200_OK
 
-    def test_get_nonexistant_counter(self, client):
+    def test_get_nonexistent_counter(self, client):
         """Attempts to get a counter that does not exist"""
 
-        result = client.get("/counters/nonexistant_test")
+        result = client.get("/counters/nonexistent_test")
+
+        assert result.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_counter(self, client):
+        """Creates a counter and then deletes it"""
+
+        result = client.post("/counters/delete_test")
+
+        assert result.status_code == status.HTTP_201_CREATED
+
+        result = client.delete("/counters/delete_test")
+
+        assert result.status_code == status.HTTP_204_NO_CONTENT
+
+        result = client.get("/counters/delete_test")
+
+        assert result.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_nonexistent_counter(self, client):
+        """Attempts to delete a counter that does not exist"""
+
+        result = client.delete("/counters/nonexistent_test")
 
         assert result.status_code == status.HTTP_404_NOT_FOUND
