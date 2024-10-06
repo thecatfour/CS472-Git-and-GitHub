@@ -22,59 +22,31 @@ DO_SHUFFLE = False
 USE_PIPELINE = False
 
 # functions
-def getEvaluationMetrics(predicted, actual):
-    
-    # this should never happen
-    if(len(predicted) != len(actual)):
-        print("Error in evaluation metrics calculations.")
-        exit
-    
-    totalInstances = len(predicted)
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
-    truePositive = 0
-    falsePositive = 0
-    trueNegative = 0
-    falseNegative = 0
+def getEvaluationMetrics(predicted, actual, positive_label):
+    # Check for length mismatch
+    if len(predicted) != len(actual):
+        raise ValueError("Predicted and actual arrays must have the same length.")
+    
+    # Calculate accuracy
+    accuracy = accuracy_score(actual, predicted)
+    
+    # Calculate precision (for positive class)
+    precision = precision_score(actual, predicted, pos_label=positive_label, zero_division=1)
+    
+    # Calculate recall (sensitivity)
+    sensitivity = recall_score(actual, predicted, pos_label=positive_label, zero_division=1)
+    
+    # Calculate F1 score
+    f1 = f1_score(actual, predicted, pos_label=positive_label, zero_division=1)
+    
+    # Calculate confusion matrix to derive specificity
+    tn, fp, fn, tp = confusion_matrix(actual, predicted, labels=[OUTCOME_2, OUTCOME_1]).ravel()
+    specificity = tn / (tn + fp) if (tn + fp) > 0 else 1.0
+    
+    return [accuracy, sensitivity, specificity, precision, f1]
 
-    # calculates loss matrix values
-    for i in range(totalInstances):
-        if(actual[i] == OUTCOME_1):
-            if(predicted[i] == OUTCOME_1):
-                truePositive += 1
-            elif(predicted[i] == OUTCOME_2):
-                falseNegative += 1
-        elif(actual[i] == OUTCOME_2):
-            if(predicted[i] == OUTCOME_1):
-                falsePositive += 1
-            elif(predicted[i] == OUTCOME_2):
-                trueNegative += 1
-    
-    # if statements prevent division by 0 in weird cases
-    if(totalInstances == 0):
-        accuracy = 1.0
-    else:
-        accuracy = (truePositive + trueNegative)/totalInstances
-    
-    if((truePositive + falseNegative) == 0):
-        sensitivity = 1.0
-    else:
-        sensitivity = truePositive/(truePositive + falseNegative)
-    
-    if((trueNegative + falsePositive) == 0):
-        specificity = 1.0
-    else:
-        specificity = trueNegative/(trueNegative + falsePositive)
-    
-    if((truePositive + falsePositive) == 0):
-        precision = 1.0
-    else:
-        precision = truePositive/(truePositive + falsePositive)
-    
-    f1Score = 2 * (precision * sensitivity)/(precision + sensitivity)
-    
-    # print("tp: ", truePositive, " fp: ", falsePositive, " tn: ", trueNegative, " fn: ", falseNegative)
-
-    return [accuracy, sensitivity, specificity, precision, f1Score]
 
 # copy info from file
 f = open(FILE_PATH, "r")
@@ -136,11 +108,11 @@ naiveBayes = GaussianNB()
 naiveBayes.fit(trainX,trainY)
 
 # get evaluation metrics
-logRegTrainingEM = getEvaluationMetrics(logReg.predict(trainX), trainY)
-logRegTestingEM = getEvaluationMetrics(logReg.predict(testX), testY)
+logRegTrainingEM = getEvaluationMetrics(logReg.predict(trainX), trainY, OUTCOME_1)
+logRegTestingEM = getEvaluationMetrics(logReg.predict(testX), testY, OUTCOME_1)
 
-nbTrainingEM = getEvaluationMetrics(naiveBayes.predict(trainX), trainY)
-nbTestingEM = getEvaluationMetrics(naiveBayes.predict(testX), testY)
+nbTrainingEM = getEvaluationMetrics(naiveBayes.predict(trainX), trainY, OUTCOME_1)
+nbTestingEM = getEvaluationMetrics(naiveBayes.predict(testX), testY, OUTCOME_1)
 
 # get log loss
 prob = logReg.predict_proba(trainX)
