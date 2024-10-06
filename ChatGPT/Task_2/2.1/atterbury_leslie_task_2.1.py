@@ -24,7 +24,7 @@ USE_PIPELINE = False
 # functions
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
-def getEvaluationMetrics(predicted, actual, positive_label):
+def getEvaluationMetrics(predicted, actual, positive_label, negative_label):
     # Check for length mismatch
     if len(predicted) != len(actual):
         raise ValueError("Predicted and actual arrays must have the same length.")
@@ -42,7 +42,7 @@ def getEvaluationMetrics(predicted, actual, positive_label):
     f1 = f1_score(actual, predicted, pos_label=positive_label, zero_division=1)
     
     # Calculate confusion matrix to derive specificity
-    tn, fp, fn, tp = confusion_matrix(actual, predicted, labels=[OUTCOME_2, OUTCOME_1]).ravel()
+    tn, fp, fn, tp = confusion_matrix(actual, predicted, labels=[negative_label, positive_label]).ravel()
     specificity = tn / (tn + fp) if (tn + fp) > 0 else 1.0
     
     return [accuracy, sensitivity, specificity, precision, f1]
@@ -108,11 +108,11 @@ naiveBayes = GaussianNB()
 naiveBayes.fit(trainX,trainY)
 
 # get evaluation metrics
-logRegTrainingEM = getEvaluationMetrics(logReg.predict(trainX), trainY, OUTCOME_1)
-logRegTestingEM = getEvaluationMetrics(logReg.predict(testX), testY, OUTCOME_1)
+logRegTrainingEM = getEvaluationMetrics(logReg.predict(trainX), trainY, OUTCOME_1, OUTCOME_2)
+logRegTestingEM = getEvaluationMetrics(logReg.predict(testX), testY, OUTCOME_1, OUTCOME_2)
 
-nbTrainingEM = getEvaluationMetrics(naiveBayes.predict(trainX), trainY, OUTCOME_1)
-nbTestingEM = getEvaluationMetrics(naiveBayes.predict(testX), testY, OUTCOME_1)
+nbTrainingEM = getEvaluationMetrics(naiveBayes.predict(trainX), trainY, OUTCOME_1, OUTCOME_2)
+nbTestingEM = getEvaluationMetrics(naiveBayes.predict(testX), testY, OUTCOME_1, OUTCOME_2)
 
 # get log loss
 prob = logReg.predict_proba(trainX)
