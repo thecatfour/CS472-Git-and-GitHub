@@ -31,9 +31,6 @@ jobs:
   security_scan:
     name: Security Scan with Trivy
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./tdd
     steps:
       - name: Install Trivy
         run: |
