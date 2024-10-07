@@ -27,3 +27,22 @@ jobs:
       - name: Run unit tests with pytests
         run: |
           pytest -v --tb=short --color=yes --cov=src --cov-report=term-missing
+
+  security_scan:
+    name: Security Scan with Trivy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./tdd
+    steps:
+      - name: Install Trivy
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -y
+          sudo apt-get install -y trivy
+      - name: Scan for vulnerabilities in Docker image
+        run: |
+          trivy image python:3.9-slim
