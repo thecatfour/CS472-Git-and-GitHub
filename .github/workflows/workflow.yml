@@ -1,5 +1,6 @@
 name: CI Workflow
 on:
+  workflow_dispatch:
   push:
     branches: ["main","tdd_repository"]
   pull_request:
